@@ -1,0 +1,10 @@
+version: '3.9'
+
+services:
+  fastapi:
+    build: .
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./app:/app
+    restart: always
