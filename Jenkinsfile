@@ -73,7 +73,7 @@ pipeline {
                         sh(script: """
                             ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${env.SSH_HOST} << 'EOF'
                         ${scriptToRun}
-                        EOF
+
                         """, label: 'Running remote deploy')
 
                     }
