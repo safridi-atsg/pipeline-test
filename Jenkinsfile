@@ -48,16 +48,14 @@ pipeline {
                             echo "Captured server: ${deployMatcher[0][2]}"
                             echo "Captured server: ${env.SERVER}"
 
-
                             switch (env.SERVER) {
                                 case 'pre-prod':
                                     env.SSH_HOST = '10.247.109.79'
                                     env.DEPLOY_PATH = '/root/test-pipeline/pipeline-test'
-                                    echo "Captured SSH_HOST: ${env.SSH_HOST}"
                                     echo "Passed Preprod__________________"
                                     break
                                 default:
-                                    return null
+                                    error "Unknown server: ${env.SERVER}"
                             }
                         }
                     }
