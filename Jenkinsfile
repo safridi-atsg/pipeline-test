@@ -98,8 +98,6 @@ def getDeploymentScript(host, branch) {
                 git pull origin ${branch}
                 echo "Updated Git branch: ${branch}"
 
-                docker compose -f docker-compose.yaml build
-                docker compose -f docker-compose.yaml up -d
                 echo "Deployment Completed ✅"
             """
         default:
@@ -123,8 +121,6 @@ def getRollbackScript(host, rollbackType, rollbackHash = "") {
                 git checkout \$HASH
                 echo "Rolled back to commit: \$HASH"
 
-                docker compose -f docker-compose.yaml build
-                docker compose -f docker-compose.yaml up -d
                 echo "Rollback Completed ✅"
             """
         default:
