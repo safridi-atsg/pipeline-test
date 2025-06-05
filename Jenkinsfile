@@ -20,43 +20,46 @@ pipeline {
                             def commitMessage = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
                             echo "Commit message: ${commitMessage}"
 
-                            def deployMatcher = commitMessage =~ /deploy\|([^\|]+)\|([^\|]+)/
+                            def action, branch, server, sshHost, deployPath
+
+                            def deployMatcher = commitMessage =~ /deploy\|([^\|]+)\|([^\|]+
                             def rollbackLastMatcher = commitMessage =~ /rollback\|last-hash\|([^\|]+)/
                             def rollbackHashMatcher = commitMessage =~ /rollback\|([a-f0-9]+)\|([^\|]+)/
 
                             if (deployMatcher) {
-                                env.ACTION = 'deploy'
-                                env.BRANCH = deployMatcher[0][1]
-                                env.SERVER = deployMatcher[0][2]
-                                echo "Inside Server_______________________"
-                            } else if (rollbackLastMatcher) {
+                                action = 'deploy'
+                                branch = deployMatcher[0][1]
+                                server = deployMatcher[0][2]
+                             else if (rollbackLastMatcher) {
                                 env.ACTION = 'rollback'
                                 env.ROLLBACK_TYPE = 'last'
                                 env.SERVER = rollbackLastMatcher[0][1]
-                                echo "Inside Rollback__________________"
                             } else if (rollbackHashMatcher) {
                                 env.ACTION = 'rollback'
                                 env.ROLLBACK_TYPE = 'exact'
                                 env.ROLLBACK_HASH = rollbackHashMatcher[0][1]
                                 env.SERVER = rollbackHashMatcher[0][2]
-                                echo "Inside Rollback__________________"
                             } else {
                                 error "Invalid commit message format. Expected: deploy|branch|server OR rollback|last-hash|server OR rollback|<hash>|server"
                             }
 
                             echo "Captured branch: ${deployMatcher[0][1]}"
                             echo "Captured server: ${deployMatcher[0][2]}"
-                            echo "Captured server: ${env.SERVER}"
 
-                            switch (env.SERVER) {
+                            switch (server) {
                                 case 'pre-prod':
-                                    env.SSH_HOST = '10.247.109.79'
-                                    env.DEPLOY_PATH = '/root/test-pipeline/pipeline-test'
-                                    echo "Passed Preprod__________________"
+                                    sshHost = '10.247.109.79'
+                                    deployPath = '/root/test-pipeline/pipeline-test'
                                     break
                                 default:
-                                    error "Unknown server: ${env.SERVER}"
+                                    error "Unknown server: ${server}"
                             }
+
+                            env.ACTION = action
+                            env.BRANCH = branch
+                            env.SERVER = server
+                            env.SSH_HOST = sshHost
+                            env.DEPLOY_PATH = deployPath
                         }
                     }
                 }
