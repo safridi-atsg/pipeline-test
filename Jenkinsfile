@@ -12,8 +12,6 @@ pipeline {
                 dir('repo') {
                     withCredentials([usernamePassword(credentialsId: 'github-username-password', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
                         script {
-                            // Configure authenticated origin and fetch all branches
-                            echo "Hello World";
                             sh '''
                                 git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/safridi-atsg/pipeline-test
                                 git fetch --all
@@ -42,6 +40,9 @@ pipeline {
                             } else {
                                 error "Invalid commit message format. Expected: deploy|branch|server OR rollback|last-hash|server OR rollback|<hash>|server"
                             }
+
+                            echo "Captured branch: ${deployMatcher[0][1]}"
+                            echo "Captured server: ${deployMatcher[0][2]}"
 
                             switch (env.SERVER) {
                                 case 'pre-prod':
