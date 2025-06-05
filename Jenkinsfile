@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         SSH_USER = 'safridi'
-        REPO_URL = 'https://github.com/dinCloud/wtoolgui.git'
+        REPO_URL = 'https://github.com/safridi-atsg/pipeline-test'
     }
 
     stages {
@@ -14,7 +14,7 @@ pipeline {
                         script {
                             // Configure authenticated origin and fetch all branches
                             sh '''
-                                git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/dinCloud/wtoolgui.git
+                                git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/safridi-atsg/pipeline-test
                                 git fetch --all
                             '''
 
@@ -43,64 +43,12 @@ pipeline {
                             }
 
                             switch (env.SERVER) {
-                                case 'staging-nutanix':
-                                    env.SSH_HOST = '10.247.108.25'
-                                    env.DEPLOY_PATH = '/var/www/dinController-Nutanix/'
-                                    break
                                 case 'pre-prod':
                                     env.SSH_HOST = '10.247.109.79'
                                     env.DEPLOY_PATH = '/var/www/wtoolgui-docker/wtoolgui/'
                                     break
-                                case 'scheduler':
-                                    env.SSH_HOST = '10.247.108.31'
-                                    env.DEPLOY_PATH = '/var/www/wtoolgui-docker/wtoolgui/'
-                                    break
-                                case 'heartbeat-daemon':
-                                    env.SSH_HOST = '10.247.108.21'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'vmware-daemon':
-                                    env.SSH_HOST = '10.247.108.23'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'dinmanage-vip':
-                                    env.SSH_HOST = '10.247.109.36'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'dinmanage-1':
-                                    env.SSH_HOST = '10.247.109.25'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'dinmanage-2':
-                                    env.SSH_HOST = '10.247.109.26'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'dincenter-daemon':
-                                    env.SSH_HOST = '10.247.108.20'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'nutanix-daemon':
-                                    env.SSH_HOST = '10.247.108.24'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'aws-daemon':
-                                    env.SSH_HOST = '10.247.108.22'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'azure-daemon':
-                                    env.SSH_HOST = '10.247.108.22'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'nutanix-v3-daemon':
-                                    env.SSH_HOST = '10.247.108.27'
-                                    env.DEPLOY_PATH = '/'
-                                    break
-                                case 'vnc-server':
-                                    env.SSH_HOST = '10.247.109.51'
-                                    env.DEPLOY_PATH = '/'
-                                    break
                                 default:
-                                    error "Unknown server: ${env.SERVER}"
+                                    return null
                             }
                         }
                     }
@@ -129,16 +77,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Started Cypress') {
-            steps {
-                sh '''
-                    cd /var/www/dinManage-QA-Automation
-                    npm run test -- --record --key d75674cb-b872-4a5c-888b-c309d85973e3 --tag "VM Provisioning" --spec "cypress/e2e/pages/Test/*"
-                '''
-                echo "✅ Cypress tests have completed."
-            }
-        }
     }
 }
 
@@ -159,99 +97,9 @@ def getDeploymentScript(host, branch) {
                 git pull origin ${branch}
                 echo "Updated Git branch: ${branch}"
 
-                docker compose -f docker-compose-stag-prod.yaml build
-                docker compose -f docker-compose-stag-prod.yaml up -d
-                echo "Docker services started"
-
-                docker image prune -f --filter "dangling=true"
-                docker builder prune -f
-                echo "Docker cleanup done"
-            """
-        case '10.247.108.31': // Production
-            return """
-                sudo su -
-                cd ${env.DEPLOY_PATH}
-                echo "Production - Entered project directory"
-
-                git rev-parse HEAD > ~/.last_healthy_commit
-                echo "Secured last healthy commit"
-
-                git fetch --all
-                git checkout ${branch}
-                git pull origin ${branch}
-                echo "Updated Git branch: ${branch}"
-
-                docker compose -f docker-compose-stag-prod.yaml build
-                docker compose -f docker-compose-stag-prod.yaml up -d
-                echo "Docker services started"
-
-                docker image prune -f --filter "dangling=true"
-                docker builder prune -f
-                echo "Docker cleanup done"
-            """
-        case '10.247.108.25': // Staging Nutanix
-            return """
-                sudo su -
-                su - apache -s /bin/bash
-                cd ${env.DEPLOY_PATH}
-                echo "Nutanix - Entered project directory"
-
-                git rev-parse HEAD > ~/.last_healthy_commit
-                echo "Secured last healthy commit"
-
-                git fetch --all
-                git checkout ${branch}
-                git pull origin ${branch}
-                echo "Updated Git branch: ${branch}"
-
-                python3.10 daemon/w2control.py stop
-                python3.10 daemon/w2control.py start
-                ps aux | grep python | grep -v grep
-                echo "Python daemon restarted"
-            """
-        case '10.247.108.21': // heartbeat-daemon
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.108.23': // vmware-daemon
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.109.36': // dinmanage-vip
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.109.25': // dinmanage-1
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.109.26': // dinmanage-2
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.108.20': // dincenter-daemon
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.108.24': // nutanix-daemon
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.108.22': // aws-daemon
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.108.27': // nutanix-v3-daemon
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.109.51': // vnc-server
-            return """
-                cd ${env.DEPLOY_PATH}
-            """
-        case '10.247.109.100': // webhvd
-            return """
-                cd ${env.DEPLOY_PATH}
+                docker compose -f docker-compose.yaml build
+                docker compose -f docker-compose.yaml up -d
+                echo "Deployment Completed ✅"
             """
         default:
             return null
@@ -274,62 +122,9 @@ def getRollbackScript(host, rollbackType, rollbackHash = "") {
                 git checkout \$HASH
                 echo "Rolled back to commit: \$HASH"
 
-                docker compose -f docker-compose-stag-prod.yaml build
-                docker compose -f docker-compose-stag-prod.yaml up -d
-                echo "Rollback complete"
-            """
-        case '10.247.108.31': // scheduler
-            return """
-                sudo su -
-                cd ${env.DEPLOY_PATH}
-                echo "Rollback - Entered project directory"
-
-                git fetch --all
-                HASH=\$(${hashCommand})
-                git checkout \$HASH
-                echo "Rolled back to commit: \$HASH"
-
-                docker compose -f docker-compose-stag-prod.yaml build
-                docker compose -f docker-compose-stag-prod.yaml up -d
-                echo "Rollback complete"
-            """
-        case '10.247.108.25': // staging-nutanix
-            return """
-                sudo su -
-                su - apache -s /bin/bash
-                cd ${env.DEPLOY_PATH}
-                echo "Rollback - Entered project directory"
-
-                git fetch --all
-                HASH=\$(${hashCommand})
-                git checkout \$HASH
-                echo "Rolled back to commit: \$HASH"
-
-                python3.10 daemon/w2control.py stop
-                python3.10 daemon/w2control.py start
-                ps aux | grep python | grep -v grep
-                echo "Python daemon restarted after rollback"
-            """
-        case '10.247.108.21': // heartbeat-daemon
-        case '10.247.108.23': // vmware-daemon
-        case '10.247.109.36': // dinmanage-vip
-        case '10.247.109.25': // dinmanage-1
-        case '10.247.109.26': // dinmanage-2
-        case '10.247.108.20': // dincenter-daemon
-        case '10.247.108.24': // nutanix-daemon
-        case '10.247.108.22': // aws-daemon / azure-daemon
-        case '10.247.108.27': // nutanix-v3-daemon
-        case '10.247.109.51': // vnc-server
-        case '10.247.109.100': // webhvd
-            return """
-                sudo su -
-                cd ${env.DEPLOY_PATH}
-                echo "Rollback - Entered project directory"
-
-                git fetch --all
-                HASH=\$(${hashCommand})
-                git checkout \$HASH
-                echo "Rolled back to commit: \$HASH"
+                docker compose -f docker-compose.yaml build
+                docker compose -f docker-compose.yaml up -d
+                echo "Rollback Completed ✅"
             """
         default:
             return null
