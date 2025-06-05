@@ -28,26 +28,33 @@ pipeline {
                                 env.ACTION = 'deploy'
                                 env.BRANCH = deployMatcher[0][1]
                                 env.SERVER = deployMatcher[0][2]
+                                echo "Inside Server_______________________"
                             } else if (rollbackLastMatcher) {
                                 env.ACTION = 'rollback'
                                 env.ROLLBACK_TYPE = 'last'
                                 env.SERVER = rollbackLastMatcher[0][1]
+                                echo "Inside Rollback__________________"
                             } else if (rollbackHashMatcher) {
                                 env.ACTION = 'rollback'
                                 env.ROLLBACK_TYPE = 'exact'
                                 env.ROLLBACK_HASH = rollbackHashMatcher[0][1]
                                 env.SERVER = rollbackHashMatcher[0][2]
+                                echo "Inside Rollback__________________"
                             } else {
                                 error "Invalid commit message format. Expected: deploy|branch|server OR rollback|last-hash|server OR rollback|<hash>|server"
                             }
 
                             echo "Captured branch: ${deployMatcher[0][1]}"
                             echo "Captured server: ${deployMatcher[0][2]}"
+                            echo "Captured server: ${env.SERVER}"
+
 
                             switch (env.SERVER) {
                                 case 'pre-prod':
                                     env.SSH_HOST = '10.247.109.79'
                                     env.DEPLOY_PATH = '/root/test-pipeline/pipeline-test'
+                                    echo "Captured SSH_HOST: ${env.SSH_HOST}"
+                                    echo "Passed Preprod__________________"
                                     break
                                 default:
                                     return null
@@ -87,7 +94,7 @@ pipeline {
 
 def getDeploymentScript(host, branch) {
     switch (host) {
-        case '10.247.109.79': // pre-prod
+        case '10.247.109.79':
             return """
                 sudo su -
                 cd ${env.DEPLOY_PATH}
