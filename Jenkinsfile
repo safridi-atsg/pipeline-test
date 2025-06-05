@@ -45,7 +45,7 @@ pipeline {
                             switch (env.SERVER) {
                                 case 'pre-prod':
                                     env.SSH_HOST = '10.247.109.79'
-                                    env.DEPLOY_PATH = '/root/test-pipeline'
+                                    env.DEPLOY_PATH = '/root/test-pipeline/pipeline-test'
                                     break
                                 default:
                                     return null
