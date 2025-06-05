@@ -45,7 +45,7 @@ pipeline {
                             switch (env.SERVER) {
                                 case 'pre-prod':
                                     env.SSH_HOST = '10.247.109.79'
-                                    env.DEPLOY_PATH = '/var/www/wtoolgui-docker/wtoolgui/'
+                                    env.DEPLOY_PATH = '/root/test-pipeline'
                                     break
                                 default:
                                     return null
