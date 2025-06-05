@@ -133,6 +133,7 @@ def getRollbackScript(host, rollbackType, rollbackHash = "") {
                 echo "Rolled back to commit: \$HASH"
 
                 echo "Rollback Completed ✅"
+
             """
         default:
             return null
