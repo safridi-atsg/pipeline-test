@@ -13,6 +13,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-username-password', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
                         script {
                             // Configure authenticated origin and fetch all branches
+                            echo "Hello World";
                             sh '''
                                 git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/safridi-atsg/pipeline-test
                                 git fetch --all
