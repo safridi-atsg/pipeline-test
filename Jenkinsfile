@@ -132,3 +132,4 @@ def getRollbackScript(host, rollbackType, rollbackHash = "") {
             return null
     }
 }
+
