@@ -70,10 +70,12 @@ pipeline {
                             error "No script found for host: ${env.SSH_HOST}"
                         }
 
-                        sh """
-                            ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@${env.SSH_HOST} << 'EOF'
-                            ${scriptToRun}
-                        """
+                        sh(script: """
+                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${env.SSH_HOST} << 'EOF'
+                        ${scriptToRun}
+                        EOF
+                        """, label: 'Running remote deploy')
+
                     }
                 }
             }
