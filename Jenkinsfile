@@ -20,50 +20,38 @@ pipeline {
                             def commitMessage = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
                             echo "Commit message: ${commitMessage}"
 
-                            // Store values in local variables first
-                            def action, branch, server, sshHost, deployPath
-
-                            def deployMatcher = commitMessage =~ /deploy\|([^\|]+)\|([^\|]+)/
-                            def rollbackLastMatcher = commitMessage =~ /rollback\|last-hash\|([^\|]+)/
-                            def rollbackHashMatcher = commitMessage =~ /rollback\|([a-f0-9]+)\|([^\|]+)/
+                            def deployMatcher = commitMessage =~ /deploy\|([^\|]+)\|([^\|]+)\|/
+                            def rollbackLastMatcher = commitMessage =~ /rollback\|last-hash\|([^\|]+)\|/
+                            def rollbackHashMatcher = commitMessage =~ /rollback\|([a-f0-9]+)\|([^\|]+)\|/
 
                             if (deployMatcher) {
-                                action = 'deploy'
-                                branch = deployMatcher[0][1]
-                                server = deployMatcher[0][2]
+                                env.ACTION = 'deploy'
+                                env.BRANCH = deployMatcher[0][1]
+                                env.SERVER = deployMatcher[0][2]
                             } else if (rollbackLastMatcher) {
-                                action = 'rollback'
-                                rollbackType = 'last'
-                                server = rollbackLastMatcher[0][1]
+                                env.ACTION = 'rollback'
+                                env.ROLLBACK_TYPE = 'last'
+                                env.SERVER = rollbackLastMatcher[0][1]
                             } else if (rollbackHashMatcher) {
-                                action = 'rollback'
-                                rollbackType = 'exact'
-                                rollbackHash = rollbackHashMatcher[0][1]
-                                server = rollbackHashMatcher[0][2]
+                                env.ACTION = 'rollback'
+                                env.ROLLBACK_TYPE = 'exact'
+                                env.ROLLBACK_HASH = rollbackHashMatcher[0][1]
+                                env.SERVER = rollbackHashMatcher[0][2]
                             } else {
                                 error "Invalid commit message format. Expected: deploy|branch|server OR rollback|last-hash|server OR rollback|<hash>|server"
                             }
 
-                            echo "Captured branch: ${branch}"
-                            echo "Captured server: ${server}"
+                            echo "Captured branch: ${deployMatcher[0][1]}"
+                            echo "Captured server: ${deployMatcher[0][2]}"
 
-                            // Set server-specific parameters
-                            switch (server) {
+                            switch (env.SERVER) {
                                 case 'pre-prod':
-                                    sshHost = '10.247.109.79'
-                                    deployPath = '/root/test-pipeline/pipeline-test'
-                                    echo "Passed Preprod__________________"
+                                    env.SSH_HOST = '10.247.109.79'
+                                    env.DEPLOY_PATH = '/root/test-pipeline/pipeline-test'
                                     break
                                 default:
-                                    error "Unknown server: ${server}"
+                                    error "Unknown server: ${env.SERVER}"
                             }
-
-                            // Now set environment variables
-                            env.ACTION = action
-                            env.BRANCH = branch
-                            env.SERVER = server
-                            env.SSH_HOST = sshHost
-                            env.DEPLOY_PATH = deployPath
                         }
                     }
                 }
@@ -71,13 +59,14 @@ pipeline {
         }
 
         stage('Deploy to Remote Server') {
-            when {
-                expression { env.ACTION == 'deploy' }
-            }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-safridi', keyFileVariable: 'SSH_KEY')]) {
                     script {
-                        def scriptToRun = getDeploymentScript(env.SSH_HOST, env.BRANCH)
+                        def isRollback = env.ACTION == 'rollback'
+                        def scriptToRun = isRollback
+                            ? getRollbackScript(env.SSH_HOST, env.ROLLBACK_TYPE, env.ROLLBACK_HASH)
+                            : getDeploymentScript(env.SSH_HOST, env.BRANCH)
+
                         if (!scriptToRun) {
                             error "No script found for host: ${env.SSH_HOST}"
                         }
@@ -85,36 +74,16 @@ pipeline {
                         sh(script: """
                             ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${env.SSH_HOST} << 'EOF'
                         ${scriptToRun}
-                        EOF
+
                         """, label: 'Running remote deploy')
-                    }
-                }
-            }
-        }
 
-        stage('Rollback') {
-            when {
-                expression { env.ACTION == 'rollback' }
-            }
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key-safridi', keyFileVariable: 'SSH_KEY')]) {
-                    script {
-                        def scriptToRun = getRollbackScript(env.SSH_HOST, env.ROLLBACK_TYPE, env.ROLLBACK_HASH)
-                        if (!scriptToRun) {
-                            error "No rollback script found for host: ${env.SSH_HOST}"
-                        }
-
-                        sh(script: """
-                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $SSH_USER@${env.SSH_HOST} << 'EOF'
-                        ${scriptToRun}
-                        EOF
-                        """, label: 'Running remote rollback')
                     }
                 }
             }
         }
     }
 }
+
 
 def getDeploymentScript(host, branch) {
     switch (host) {
@@ -126,6 +95,7 @@ def getDeploymentScript(host, branch) {
 
                 git rev-parse HEAD > ~/.last_healthy_commit
                 echo "Secured last healthy commit"
+
 
                 git fetch --all
                 git checkout ${branch}
@@ -139,11 +109,12 @@ def getDeploymentScript(host, branch) {
     }
 }
 
+
 def getRollbackScript(host, rollbackType, rollbackHash = "") {
     def hashCommand = rollbackType == 'last' ? "cat ~/.last_healthy_commit" : "echo ${rollbackHash}"
 
     switch (host) {
-        case '10.247.109.79':
+        case '10.247.109.79': // pre-prod
             return """
                 sudo su -
                 cd ${env.DEPLOY_PATH}
@@ -155,6 +126,7 @@ def getRollbackScript(host, rollbackType, rollbackHash = "") {
                 echo "Rolled back to commit: \$HASH"
 
                 echo "Rollback Completed ✅"
+
             """
         default:
             return null
