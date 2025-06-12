@@ -6,9 +6,6 @@ pipeline {
         REPO_URL = 'https://github.com/safridi-atsg/pipeline-test'
     }
 
-
-
-
     stages {
         stage('Parse Commit Message') {
             steps {
