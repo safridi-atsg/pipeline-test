@@ -109,6 +109,7 @@ def getDeploymentScript(host, branch) {
                 echo "Updated Git branch: ${branch}"
 
                 echo "Deployment Completed ✅"
+
             """
         default:
             return null
