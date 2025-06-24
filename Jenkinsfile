@@ -99,7 +99,6 @@ def getDeploymentScript(host, branch) {
                 git rev-parse HEAD > ~/.last_healthy_commit
                 echo "Secured last healthy commit"
 
-
                 git fetch --all
                 git checkout ${branch}
                 git pull origin ${branch}
