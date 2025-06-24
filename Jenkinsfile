@@ -86,12 +86,6 @@ pipeline {
 
 
 
-
-
-
-
-
-
 def getDeploymentScript(host, branch) {
     switch (host) {
         case '10.247.109.79':
